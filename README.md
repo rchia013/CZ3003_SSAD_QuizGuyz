@@ -1,1 +1,0 @@
-# CZ3003_SSAD_QuizGuyz

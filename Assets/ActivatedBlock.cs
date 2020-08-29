@@ -4,43 +4,91 @@ using UnityEngine;
 
 public class ActivatedBlock : MonoBehaviour
 {
+    public Material material4;
     public Material material3;
     public Material material2;
     public Material material1;
 
+    public Material activeMaterial;
+    public Material originalMaterial;
+
+    GameObject parentBlock;
+    GameObject highlight;
+
     MeshRenderer rend;
     Rigidbody rb;
 
+    public bool blockActivated = false;
+    bool questionActivated = false;
+
+    GameObject player;
+    public GameObject question;
+
     // Start is called before the first frame update
-    void Start()
+
+    private void OnEnable()
     {
-        rend = gameObject.GetComponent<MeshRenderer>();
-        rb = gameObject.GetComponent<Rigidbody>();
+        parentBlock = transform.parent.gameObject;
+
+        rend = parentBlock.GetComponent<MeshRenderer>();
+        rb = parentBlock.GetComponent<Rigidbody>();
+
+        highlight = parentBlock.transform.GetChild(1).gameObject;
+
+        //Physics.IgnoreCollision(parentBlock.GetComponent<BoxCollider>(), highlight.GetComponent<CapsuleCollider>());
 
         rb.isKinematic = true;
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        Material[] materials = rend.materials;
+        materials[0] = activeMaterial;
+        rend.materials = materials;
+
+        gameObject.tag = "Question";
+
+        parentBlock.transform.Translate(Vector3.up * .15f);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.tag == "Player")
+        if (other.gameObject.tag == "Player" & !questionActivated & blockActivated)
         {
-            transform.Translate(Vector3.down * 0.1f);
-            print("Give Question");
+            print("Touch & Give Q");
 
-            StartCoroutine("Countdown");
+            player = other.gameObject;
+
+            // 1. Move Block
+
+            parentBlock.transform.Translate(Vector3.down * 0.1f);
+            questionActivated = true;
+
+
+            // 2. Activate Highlight
+
+            highlight.GetComponent<MeshRenderer>().enabled = true;
+            StartCoroutine("HighlightFadeIn");
+
+            //highlight.GetComponent<CapsuleCollider>().enabled = true;
+
+            //Physics.IgnoreCollision(other, highlight.GetComponent<CapsuleCollider>());
+
+
+            // 3. Restrict Player
+
+            player.GetComponent<Movement>().moveable = false;
+
+            // 4. Start Question
+
+            StartCoroutine("Question");
         }
     }
 
-    IEnumerator Countdown()
-    { 
-
+    IEnumerator Question()
+    {
+        // Determines Question Time
         int counter = 5;
+
+        question.GetComponent<DoQuestion>().correct = null;
+        question.SetActive(true);
 
         while (counter > 0)
         {
@@ -48,10 +96,39 @@ public class ActivatedBlock : MonoBehaviour
 
             counter--;
 
-            Material[] materials = rend.materials;
+            var materials = rend.materials;
 
-            switch (counter)
+            // Case 1: 
+
+            if (question.GetComponent<DoQuestion>().correct == true)
             {
+                player.GetComponent<Movement>().moveable = true;
+
+                question.SetActive(false);
+
+                StartCoroutine("HighlightFadeOut");
+            }
+
+            else if (question.GetComponent<DoQuestion>().correct == false)
+            {
+                StartCoroutine("HighlightFadeOut");
+
+                rb.isKinematic = false;
+                yield return new WaitForSeconds(1);
+
+                print("Gone");
+
+                Destroy(transform.parent.gameObject);
+
+                break;
+            }
+
+                switch (counter)
+            {
+                case 4:
+                    materials[0] = material4;
+                    break;
+
                 case 3:
                     materials[0] = material3;
                     break;
@@ -65,11 +142,71 @@ public class ActivatedBlock : MonoBehaviour
                     break;
 
                 case 0:
+
+                    if (question.GetComponent<DoQuestion>().correct == null)
+                    {
+                        StartCoroutine("HighlightFadeOut");
+                    }
+
                     rb.isKinematic = false;
+                    yield return new WaitForSeconds(1);
+
+                    print("Gone");
+
+                    Destroy(transform.parent.gameObject);
+                    
                     break;
             }
 
             rend.materials = materials;
+        }
+    }
+
+    IEnumerator HighlightFadeIn()
+    {
+        MeshRenderer highlightRend = highlight.GetComponent<MeshRenderer>();
+        Color highlightColor = highlightRend.material.color;
+
+        for (float t = 0.0f; t < 1.0f; t += Time.deltaTime / 1)
+        {
+            Color newColor = new Color(highlightColor.r, highlightColor.g, highlightColor.b, Mathf.Lerp(0, highlightColor.a, t));
+
+            highlightRend.material.SetColor("_Color", newColor);
+
+            yield return null;
+        }
+    }
+
+    IEnumerator HighlightFadeOut()
+    {
+        MeshRenderer highlightRend = highlight.GetComponent<MeshRenderer>();
+        Color highlightColor = highlightRend.material.color;
+
+        for (float t = 0.0f; t < 1.0f; t += Time.deltaTime / 1)
+        {
+            Color newColor = new Color(highlightColor.r, highlightColor.g, highlightColor.b, Mathf.Lerp(highlightColor.a, 0, t));
+
+            highlightRend.material.SetColor("_Color", newColor);
+
+            yield return null;
+        }
+    }
+
+
+
+    private void OnDisable()
+    {
+        gameObject.tag = "Untagged";
+
+        if (rb.isKinematic)
+        {
+            Material[] materials = rend.materials;
+            materials[0] = originalMaterial;
+            rend.materials = materials;
+
+            parentBlock.transform.Translate(Vector3.down * .15f);
+
+           
         }
     }
 }

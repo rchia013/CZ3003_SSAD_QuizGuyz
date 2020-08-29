@@ -22,7 +22,7 @@ public class ActivePlatform : MonoBehaviour
     int curNum = -1;
     int prevNum = -1;
 
-    int curSpec = -1;
+    int curPowerBlock = -1;
 
     // Player:
 

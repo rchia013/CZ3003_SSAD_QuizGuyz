@@ -24,7 +24,7 @@ public class ActivatedBlock : MonoBehaviour
     GameObject player;
     public GameObject question;
 
-    // Start is called before the first frame update
+   
 
     private void OnEnable()
     {
@@ -62,19 +62,22 @@ public class ActivatedBlock : MonoBehaviour
             questionActivated = true;
 
 
-            // 2. Activate Highlight
+            // 2. Restrict Player
+
+            player.GetComponent<Movement>().moveable = false;
+
+
+
+            // 3. Activate Highlight
 
             highlight.GetComponent<MeshRenderer>().enabled = true;
             StartCoroutine("HighlightFadeIn");
 
-            //highlight.GetComponent<CapsuleCollider>().enabled = true;
+            Physics.IgnoreCollision(player.GetComponent<CharacterController>(), highlight.GetComponent<CapsuleCollider>(), true);
+            Physics.IgnoreCollision(player.GetComponent<BoxCollider>(), highlight.GetComponent<CapsuleCollider>(), true);
+            
 
-            //Physics.IgnoreCollision(other, highlight.GetComponent<CapsuleCollider>());
-
-
-            // 3. Restrict Player
-
-            player.GetComponent<Movement>().moveable = false;
+            highlight.GetComponent<CapsuleCollider>().enabled = true;
 
             // 4. Start Question
 
@@ -113,7 +116,7 @@ public class ActivatedBlock : MonoBehaviour
             {
                 StartCoroutine("HighlightFadeOut");
 
-                rb.isKinematic = false;
+                dropBlock();
                 yield return new WaitForSeconds(1);
 
                 print("Gone");
@@ -148,7 +151,7 @@ public class ActivatedBlock : MonoBehaviour
                         StartCoroutine("HighlightFadeOut");
                     }
 
-                    rb.isKinematic = false;
+                    dropBlock();
                     yield return new WaitForSeconds(1);
 
                     print("Gone");
@@ -192,6 +195,16 @@ public class ActivatedBlock : MonoBehaviour
         }
     }
 
+    void dropBlock()
+    {
+        Physics.IgnoreCollision(player.GetComponent<CharacterController>(), highlight.GetComponent<CapsuleCollider>(), false);
+        Physics.IgnoreCollision(player.GetComponent<BoxCollider>(), highlight.GetComponent<CapsuleCollider>(), false);
+
+        highlight.GetComponent<CapsuleCollider>().enabled = false;
+
+        rb.isKinematic = false;
+    }
+
 
 
     private void OnDisable()
@@ -205,7 +218,6 @@ public class ActivatedBlock : MonoBehaviour
             rend.materials = materials;
 
             parentBlock.transform.Translate(Vector3.down * .15f);
-
            
         }
     }
